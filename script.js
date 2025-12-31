@@ -1,82 +1,105 @@
-// =====================================
-// WASTE CLASSIFICATION - Teachable Machine Integration
-// Saar Malhotra | 2025
-// =====================================
-
+// WasteClassify - Teachable Machine Integration
 let model = null;
 let videoStream = null;
 let classificationInterval = null;
-const MODEL_URL = './model.json'; // From ROOT directory
-
-// Classes from YOUR Teachable Machine
+const MODEL_URL = './model.json';
 const classes = ['Organic', 'Reusable'];
 
-// ===== INITIALIZATION =====
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 WasteClassify Loading...');
   loadModel();
   setupEventListeners();
 });
 
-// ===== LOAD TEACHABLE MACHINE MODEL =====
+// Load Teachable Machine model
 async function loadModel() {
   try {
     updateStatus('Loading AI Model...', true);
-    console.log('📦 Loading from:', MODEL_URL);
-    
     model = await tf.loadLayersModel(MODEL_URL);
-    console.log('✅ Model Loaded!');
     updateStatus('✅ Ready to Classify!', true);
+    console.log('✅ Model loaded successfully');
   } catch (error) {
-    console.warn('Model load failed (demo mode):', error.message);
-    updateStatus('⚠️ Demo Mode - Using Simulations', false);
+    console.warn('Model load failed:', error.message);
+    updateStatus('⚠️ Demo Mode (Model Simulation)', false);
   }
 }
 
-// ===== EVENT LISTENERS =====
+// Setup all event listeners
 function setupEventListeners() {
   // Tab buttons
-  document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
-    btn.addEventListener('click', () => switchTab(idx === 0 ? 'camera' : 'upload'));
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const tabName = e.target.dataset.tab;
+      switchTab(tabName);
+    });
   });
 
   // Camera buttons
-  document.getElementById('startBtn')?.addEventListener('click', startCamera);
-  document.getElementById('stopBtn')?.addEventListener('click', stopCamera);
+  document.getElementById('startBtn').addEventListener('click', startCamera);
+  document.getElementById('stopBtn').addEventListener('click', stopCamera);
 
-  // Upload handling
-  const uploadInput = document.getElementById('fileInput');
+  // File upload
+  const fileInput = document.getElementById('fileInput');
   const uploadBox = document.getElementById('uploadBox');
 
-  uploadBox?.addEventListener('click', () => uploadInput?.click());
-  uploadBox?.addEventListener('dragover', (e) => {
+  uploadBox.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+  // Drag and drop
+  uploadBox.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadBox.style.borderColor = '#10b981';
     uploadBox.style.background = 'rgba(16, 185, 129, 0.1)';
   });
-  uploadBox?.addEventListener('dragleave', (e) => {
-    e.preventDefault();
+
+  uploadBox.addEventListener('dragleave', () => {
     uploadBox.style.borderColor = '#3b82f6';
     uploadBox.style.background = 'transparent';
   });
-  uploadBox?.addEventListener('drop', (e) => {
+
+  uploadBox.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadBox.style.borderColor = '#3b82f6';
     uploadBox.style.background = 'transparent';
     handleFile(e.dataTransfer.files[0]);
   });
-
-  uploadInput?.addEventListener('change', (e) => handleFile(e.target.files[0]));
 }
 
-// ===== CAMERA FUNCTIONS =====
+// Switch between tabs
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.remove('active');
+  });
+
+  // Remove active class from buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Show selected tab
+  document.getElementById(tabName).classList.add('active');
+  event.target.classList.add('active');
+
+  // Stop camera if switching away
+  if (tabName !== 'camera') {
+    stopCamera();
+  }
+}
+
+// Start camera
 async function startCamera() {
   try {
-    updateStatus('📹 Starting Camera...', true);
+    updateStatus('📹 Starting camera...', true);
     const video = document.getElementById('video');
 
     videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: 224, height: 224 }
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 640 },
+        height: { ideal: 640 }
+      },
+      audio: false
     });
 
     video.srcObject = videoStream;
@@ -84,28 +107,29 @@ async function startCamera() {
       video.play();
       document.getElementById('startBtn').disabled = true;
       document.getElementById('stopBtn').disabled = false;
-      updateStatus('📹 Camera Active', true);
-      startAutoClassify();
+      updateStatus('📹 Camera Active - Classifying...', true);
+      startAutoClassification();
     };
   } catch (error) {
     updateStatus('❌ Camera access denied', false);
-    alert('Camera not available: ' + error.message);
+    alert('Camera Error: ' + error.message);
   }
 }
 
+// Stop camera
 function stopCamera() {
   if (videoStream) {
-    videoStream.getTracks().forEach(t => t.stop());
+    videoStream.getTracks().forEach(track => track.stop());
     document.getElementById('video').srcObject = null;
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
     if (classificationInterval) clearInterval(classificationInterval);
-    updateStatus('Ready', true);
+    updateStatus('Ready for input', true);
   }
 }
 
-// ===== AUTO CLASSIFICATION FROM CAMERA =====
-function startAutoClassify() {
+// Auto classify from camera every 2 seconds
+function startAutoClassification() {
   if (classificationInterval) clearInterval(classificationInterval);
 
   classificationInterval = setInterval(() => {
@@ -116,6 +140,7 @@ function startAutoClassify() {
   }, 2000);
 }
 
+// Predict from video frame
 async function predictFromVideo() {
   try {
     const video = document.getElementById('video');
@@ -146,10 +171,12 @@ async function predictFromVideo() {
   }
 }
 
-// ===== UPLOAD & FILE HANDLING =====
+// Handle file upload
 function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) {
-    updateStatus('❌ Please select an image', false);
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    updateStatus('❌ Please select an image file', false);
     return;
   }
 
@@ -158,7 +185,7 @@ function handleFile(file) {
     return;
   }
 
-  updateStatus('🔄 Analyzing Image...', true);
+  updateStatus('🔄 Analyzing image...', true);
   const reader = new FileReader();
 
   reader.onload = (e) => {
@@ -171,6 +198,7 @@ function handleFile(file) {
   reader.readAsDataURL(file);
 }
 
+// Predict from uploaded image
 async function predictFromImage(img) {
   try {
     const canvas = document.getElementById('canvas');
@@ -200,43 +228,46 @@ async function predictFromImage(img) {
   }
 }
 
-// ===== DISPLAY RESULTS =====
+// Display results
 function displayResults(predictions) {
   const maxIdx = predictions.indexOf(Math.max(...predictions));
   const className = classes[maxIdx];
   const confidence = (predictions[maxIdx] * 100).toFixed(1);
 
-  console.log(`🎯 ${className} - ${confidence}%`);
+  console.log(`🎯 Result: ${className} - ${confidence}%`);
 
-  // Show result
-  const resultDiv = document.getElementById('result');
-  resultDiv.classList.remove('hidden');
-  resultDiv.innerHTML = `
-    <h3>${className}</h3>
-    <p>${confidence}% Confidence</p>
+  // Show result card
+  const resultCard = document.getElementById('resultCard');
+  resultCard.classList.remove('hidden');
+  document.getElementById('result').innerHTML = `
+    <h3 class="result-class">${className}</h3>
+    <p class="result-confidence">Confidence: ${confidence}%</p>
   `;
 
   // Show chart
-  const chartDiv = document.getElementById('chart');
-  chartDiv.classList.remove('hidden');
-  chartDiv.innerHTML = classes.map((cls, i) => {
+  const chartCard = document.getElementById('chartCard');
+  chartCard.classList.remove('hidden');
+  const colors = ['#10b981', '#3b82f6'];
+  
+  const chartHTML = classes.map((cls, i) => {
     const pct = (predictions[i] * 100).toFixed(1);
-    const colors = ['#10b981', '#3b82f6'];
     return `
       <div class="chart-bar">
-        <span>${cls}</span>
+        <span class="bar-label">${cls}</span>
         <div class="bar-bg">
           <div class="bar-fill" style="width: ${pct}%; background: ${colors[i]};"></div>
         </div>
-        <span>${pct}%</span>
+        <span class="bar-value">${pct}%</span>
       </div>
     `;
   }).join('');
+  
+  document.getElementById('chart').innerHTML = chartHTML;
 
   updateStatus(`✅ Classified as ${className}`, true);
 }
 
-// ===== SIMULATE PREDICTION (DEMO MODE) =====
+// Simulate prediction for demo mode
 function simulatePredict() {
   const predictions = [
     Math.random() * 0.5 + 0.2,
@@ -246,28 +277,11 @@ function simulatePredict() {
   displayResults(predictions.map(p => p / sum));
 }
 
-// ===== TAB SWITCHING =====
-function switchTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-  if (tab === 'camera') {
-    document.getElementById('cameraTab').classList.remove('hidden');
-    document.querySelectorAll('.tab-btn')[0].classList.add('active');
-  } else {
-    document.getElementById('uploadTab').classList.remove('hidden');
-    document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    stopCamera();
-  }
-}
-
-// ===== UTILITIES =====
+// Update status message
 function updateStatus(msg, success = true) {
   const el = document.getElementById('status');
   if (el) {
     el.textContent = msg;
     el.style.color = success ? '#10b981' : '#f59e0b';
   }
-  console.log(`[${success ? '✓' : '⚠'}] ${msg}`);
 }
-
