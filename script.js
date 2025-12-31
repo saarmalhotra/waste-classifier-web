@@ -28,45 +28,120 @@ async function loadModel() {
   }
 }
 
-// Initialize upload handler
+// Initialize upload handler with proper event delegation
 function initializeUploadHandler() {
   const uploadInput = document.getElementById('upload');
-  if (uploadInput) {
-    uploadInput.addEventListener('change', handleFileUpload);
-    console.log('Upload handler initialized');
+  const uploadArea = document.getElementById('uploadArea');
+  
+  if (!uploadInput) {
+    console.error('Upload input element not found');
+    return;
+  }
+  
+  // Direct file input change event
+  uploadInput.addEventListener('change', handleFileUpload);
+  console.log('Upload input change event bound');
+  
+  // Upload area click handler - directly trigger file input click
+  if (uploadArea) {
+    uploadArea.addEventListener('click', (e) => {
+      console.log('Upload area clicked, triggering file input');
+      e.preventDefault();
+      e.stopPropagation();
+      uploadInput.click();
+    });
+    
+    // Drag and drop support
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      uploadArea.style.opacity = '0.7';
+      uploadArea.style.borderColor = '#10b981';
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      uploadArea.style.opacity = '1';
+      uploadArea.style.borderColor = '#0066cc';
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      uploadArea.style.opacity = '1';
+      uploadArea.style.borderColor = '#0066cc';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        console.log('File dropped:', file.name);
+        processFile(file);
+      }
+    });
+    
+    console.log('Upload area drag and drop handlers bound');
   } else {
-    console.warn('Upload input element not found');
+    console.warn('Upload area element not found');
   }
 }
 
-// Handle file upload
+// Handle file upload from input change event
 function handleFileUpload(e) {
-  console.log('File upload triggered');
+  console.log('File input change event fired');
   const file = e.target.files[0];
   if (file) {
-    console.log('File selected:', file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      console.log('File loaded into reader');
-      const img = new Image();
-      img.onload = () => {
-        console.log('Image loaded, starting prediction');
-        predictImage(img);
-      };
-      img.onerror = () => {
-        console.error('Image failed to load');
-        updateStatus('Failed to load image', false);
-      };
-      img.src = event.target.result;
-    };
-    reader.onerror = () => {
-      console.error('FileReader error');
-      updateStatus('Failed to read file', false);
-    };
-    reader.readAsDataURL(file);
+    console.log('File selected from picker:', file.name);
+    processFile(file);
   } else {
     console.log('No file selected');
   }
+}
+
+// Process selected file
+function processFile(file) {
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    console.error('Invalid file type:', file.type);
+    updateStatus('Please select an image file (JPG, PNG)', false);
+    return;
+  }
+  
+  // Validate file size (5MB)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    console.error('File too large:', file.size);
+    updateStatus('File size exceeds 5MB limit', false);
+    return;
+  }
+  
+  console.log('File validation passed, reading file');
+  const reader = new FileReader();
+  
+  reader.onload = (event) => {
+    console.log('File read successfully');
+    const img = new Image();
+    
+    img.onload = () => {
+      console.log('Image loaded, starting prediction');
+      updateStatus('Analyzing image...', true);
+      predictImage(img);
+    };
+    
+    img.onerror = () => {
+      console.error('Image failed to load');
+      updateStatus('Failed to load image', false);
+    };
+    
+    img.src = event.target.result;
+  };
+  
+  reader.onerror = () => {
+    console.error('FileReader error');
+    updateStatus('Failed to read file', false);
+  };
+  
+  reader.readAsDataURL(file);
 }
 
 // Start camera stream
@@ -285,4 +360,4 @@ function updateStatus(message, isSuccess = true) {
 console.log('Script loaded successfully!');
 console.log('Classes:', classes);
 console.log('Model URL:', MODEL_URL);
-console.log('Upload handler and tab buttons will be initialized on DOM load');
+console.log('File upload with drag-and-drop enabled');
