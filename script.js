@@ -2,7 +2,7 @@
 let model = null;
 let webcam = null;
 let videoStream = null;
-const classes = ['Organic', 'Plastic', 'Recyclable', 'Trash'];
+const classes = ['Organic', 'Reusable'];
 const MODEL_URL = 'model/model.json'; // Update with your Teachable Machine model URL
 
 // Initialize on page load
