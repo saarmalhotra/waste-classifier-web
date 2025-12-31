@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗑️ Smart Waste Classifier</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Instant Waste Classification</h1>
+        <div class="input-section">
+            <video id="video" width="400" height="300" autoplay muted playsinline></video>
+            <canvas id="canvas" width="224" height="224" style="display:none;"></canvas>
+            <div class="button-group">
+                <button id="startBtn" onclick="startCamera()">Start Camera</button>
+                <button id="stopBtn" onclick="stopCamera()" disabled>Stop Camera</button>
+                <label for="upload" class="upload-label">Upload Image</label>
+                <input type="file" id="upload" accept="image/*" style="display:none;">
+            </div>
+        </div>
+        <div id="result" class="result"></div>
+        <div id="confidence" class="confidence-chart"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
