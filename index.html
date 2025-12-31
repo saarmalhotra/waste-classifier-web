@@ -3,92 +3,77 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Waste Classification System</title>
+  <title>WasteClassify - AI Waste Classifier</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
 </head>
 <body>
-  <!-- Navigation Bar -->
+  <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="nav-container">
-      <h1 class="logo">WasteClassify</h1>
-      <p class="nav-subtitle">AI-Powered Waste Recognition System</p>
+    <div class="container">
+      <div class="logo">
+        <h1>🗑️ WasteClassify</h1>
+        <p>AI-Powered Waste Classification</p>
+      </div>
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <main class="main-content">
-    <div class="container">
-      <!-- Header Section -->
-      <section class="header-section">
-        <h2 class="section-title">Real-Time Waste Classification</h2>
-        <p class="section-subtitle">Classify waste materials using AI and computer vision technology</p>
-      </section>
-
-      <!-- Input Methods Tabs -->
+  <!-- MAIN -->
+  <main class="container">
+    <div class="card">
+      <!-- TABS -->
       <div class="tabs">
-        <button class="tab-button active" onclick="switchTab('camera')">Camera Input</button>
-        <button class="tab-button" onclick="switchTab('upload')">Upload Image</button>
+        <button class="tab-btn active">📹 Camera</button>
+        <button class="tab-btn">📤 Upload</button>
       </div>
 
-      <!-- Camera Tab -->
-      <div id="camera-tab" class="tab-content active">
-        <div class="video-container">
-          <video id="video" class="video-feed" autoplay muted playsinline></video>
-          <div class="video-overlay">
-            <p>Position waste item in frame</p>
-          </div>
+      <!-- CAMERA TAB -->
+      <div id="cameraTab" class="tab-content">
+        <div class="video-wrapper">
+          <video id="video" class="video-stream" autoplay muted playsinline></video>
+          <div class="video-overlay">Position waste in frame</div>
         </div>
         <div class="button-group">
-          <button id="startBtn" class="btn btn-primary" onclick="startCamera()">Start Camera</button>
-          <button id="stopBtn" class="btn btn-secondary" onclick="stopCamera()" disabled>Stop Camera</button>
+          <button id="startBtn" class="btn btn-primary">Start Camera</button>
+          <button id="stopBtn" class="btn btn-secondary" disabled>Stop Camera</button>
         </div>
       </div>
 
-      <!-- Upload Tab -->
-      <div id="upload-tab" class="tab-content">
-        <div class="upload-area" id="uploadArea">
-          <div class="upload-icon">↑</div>
-          <p class="upload-text">Drop image here or click to upload</p>
-          <p class="upload-subtext">Supported: JPG, PNG (Max 5MB)</p>
+      <!-- UPLOAD TAB -->
+      <div id="uploadTab" class="tab-content hidden">
+        <div id="uploadBox" class="upload-box">
+          <div class="upload-icon">📁</div>
+          <p>Drop image here or click to upload</p>
+          <small>JPG, PNG (Max 5MB)</small>
         </div>
-        <!-- File input - placed outside upload-area for proper event handling -->
-        <input type="file" id="upload" accept="image/*" style="display:none;">
+        <input type="file" id="fileInput" accept="image/*" style="display:none;">
       </div>
 
-      <!-- Hidden Canvas for Processing -->
-      <canvas id="canvas" width="224" height="224" style="display:none;"></canvas>
+      <!-- CANVAS (HIDDEN) -->
+      anvas id="canvas" width="224" height="224" style="display:none;"></canvas>
 
-      <!-- Results Section -->
-      <section class="results-section">
-        <div id="result" class="result-card hidden">
-          <div class="result-content">
-            <h3 class="result-title">Classification Result</h3>
-            <div class="result-display">
-              <p class="result-class" id="result-class">-</p>
-              <p class="result-confidence" id="result-confidence">Confidence: -</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Confidence Chart -->
-        <div id="confidence" class="confidence-section hidden">
-          <h3 class="chart-title">Classification Confidence</h3>
-          <div class="chart-container" id="chart-container"></div>
-        </div>
-      </section>
-
-      <!-- Status Indicator -->
-      <div id="status" class="status-box">
+      <!-- STATUS -->
+      <div class="status-bar">
         <span class="status-dot"></span>
-        <span id="status-text">Ready for input</span>
+        <span id="status">Ready for input</span>
       </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="result" class="result-card hidden">
+      <h2>Classification Result</h2>
+    </div>
+
+    <!-- CHART -->
+    <div id="chart" class="chart-card hidden">
+      <h3>Confidence Levels</h3>
+      <div id="chartContainer"></div>
     </div>
   </main>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <p>© 2025 WasteClassify | AI-Powered Waste Management System</p>
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 WasteClassify | Powered by TensorFlow.js & Google Teachable Machine</p>
   </footer>
 
   <script src="script.js"></script>
