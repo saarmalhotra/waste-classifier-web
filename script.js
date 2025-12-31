@@ -1,51 +1,77 @@
-// Waste Classification Model
+// =====================================
+// WASTE CLASSIFICATION MODEL - Integrated
+// =====================================
+
 let model = null;
 let webcam = null;
 let videoStream = null;
-const classes = ['Organic', 'Reusable'];
-const MODEL_URL = 'model/model.json'; // Update with your Teachable Machine model URL
+let classificationInterval = null;
 
-// Initialize on page load
+// Classes from your Teachable Machine model
+const classes = ['Organic', 'Reusable', 'Plastic', 'Trash'];
+
+// Model URL - Points to your model folder
+const MODEL_URL = 'model/model.json';
+
+// =====================================
+// INITIALIZATION
+// =====================================
+
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Page loaded. Attempting to load model...');
+  console.log('🚀 Page loaded. Initializing WasteClassify...');
   loadModel();
   initializeUploadHandler();
   initializeTabButtons();
+  console.log('✓ All systems initialized');
 });
 
-// Load Teachable Machine model from local folder
+// =====================================
+// MODEL LOADING (Teachable Machine)
+// =====================================
+
 async function loadModel() {
   try {
-    // Load the model from model.json
-    // Replace with your Teachable Machine export URL if using hosted model
+    updateStatus('Loading AI model...', true);
+    console.log('📦 Loading model from:', MODEL_URL);
+    
+    // Load the Teachable Machine model
     model = await tf.loadLayersModel(MODEL_URL);
-    console.log('Model loaded successfully!');
-    updateStatus('Model loaded! Ready for classification', true);
+    
+    console.log('✓ Model loaded successfully!');
+    console.log('Model summary:');
+    model.summary();
+    
+    updateStatus('✓ Model ready! You can start classifying.', true);
   } catch (error) {
-    console.warn('Local model not found, using demo mode:', error.message);
-    updateStatus('Model not loaded. Using demo predictions.', false);
-    // Model remains null, will use simulation mode
+    console.error('❌ Model loading failed:', error);
+    console.warn('Using DEMO MODE - predictions will be simulated');
+    updateStatus('⚠ Demo mode (model not loaded, using simulations)', false);
   }
 }
 
-// Initialize upload handler with proper event delegation
+// =====================================
+// FILE UPLOAD HANDLER
+// =====================================
+
 function initializeUploadHandler() {
   const uploadInput = document.getElementById('upload');
   const uploadArea = document.getElementById('uploadArea');
   
   if (!uploadInput) {
-    console.error('Upload input element not found');
+    console.error('❌ Upload input element not found');
     return;
   }
   
-  // Direct file input change event
-  uploadInput.addEventListener('change', handleFileUpload);
-  console.log('Upload input change event bound');
+  // File input change event
+  uploadInput.addEventListener('change', (e) => {
+    console.log('📁 File selected from picker');
+    const file = e.target.files[0];
+    if (file) processFile(file);
+  });
   
-  // Upload area click handler - directly trigger file input click
   if (uploadArea) {
+    // Click to upload
     uploadArea.addEventListener('click', (e) => {
-      console.log('Upload area clicked, triggering file input');
       e.preventDefault();
       e.stopPropagation();
       uploadInput.click();
@@ -54,14 +80,12 @@ function initializeUploadHandler() {
     // Drag and drop support
     uploadArea.addEventListener('dragover', (e) => {
       e.preventDefault();
-      e.stopPropagation();
       uploadArea.style.opacity = '0.7';
       uploadArea.style.borderColor = '#10b981';
     });
     
     uploadArea.addEventListener('dragleave', (e) => {
       e.preventDefault();
-      e.stopPropagation();
       uploadArea.style.opacity = '1';
       uploadArea.style.borderColor = '#0066cc';
     });
@@ -72,131 +96,144 @@ function initializeUploadHandler() {
       uploadArea.style.opacity = '1';
       uploadArea.style.borderColor = '#0066cc';
       
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        const file = files[0];
-        console.log('File dropped:', file.name);
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        console.log('📥 File dropped:', file.name);
         processFile(file);
       }
     });
     
-    console.log('Upload area drag and drop handlers bound');
-  } else {
-    console.warn('Upload area element not found');
+    console.log('✓ Upload handlers initialized');
   }
 }
 
-// Handle file upload from input change event
-function handleFileUpload(e) {
-  console.log('File input change event fired');
-  const file = e.target.files[0];
-  if (file) {
-    console.log('File selected from picker:', file.name);
-    processFile(file);
-  } else {
-    console.log('No file selected');
-  }
-}
-
-// Process selected file
+// Process uploaded file
 function processFile(file) {
   // Validate file type
   if (!file.type.startsWith('image/')) {
-    console.error('Invalid file type:', file.type);
-    updateStatus('Please select an image file (JPG, PNG)', false);
+    updateStatus('❌ Please select an image (JPG, PNG)', false);
     return;
   }
   
   // Validate file size (5MB)
-  const maxSize = 5 * 1024 * 1024;
-  if (file.size > maxSize) {
-    console.error('File too large:', file.size);
-    updateStatus('File size exceeds 5MB limit', false);
+  if (file.size > 5 * 1024 * 1024) {
+    updateStatus('❌ File must be under 5MB', false);
     return;
   }
   
-  console.log('File validation passed, reading file');
+  console.log(`📸 Processing image: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+  updateStatus('🔄 Analyzing image...', true);
+  
   const reader = new FileReader();
   
   reader.onload = (event) => {
-    console.log('File read successfully');
     const img = new Image();
     
     img.onload = () => {
-      console.log('Image loaded, starting prediction');
-      updateStatus('Analyzing image...', true);
+      console.log(`✓ Image loaded: ${img.width}x${img.height}px`);
       predictImage(img);
     };
     
     img.onerror = () => {
-      console.error('Image failed to load');
-      updateStatus('Failed to load image', false);
+      updateStatus('❌ Failed to load image', false);
     };
     
     img.src = event.target.result;
   };
   
-  reader.onerror = () => {
-    console.error('FileReader error');
-    updateStatus('Failed to read file', false);
-  };
-  
   reader.readAsDataURL(file);
 }
 
-// Start camera stream
+// =====================================
+// CAMERA FUNCTIONS
+// =====================================
+
 async function startCamera() {
   try {
+    updateStatus('📹 Starting camera...', true);
+    
     const video = document.getElementById('video');
+    
+    // Request camera with optimized constraints
     videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: 224, height: 224 },
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 640 },
+        height: { ideal: 640 }
+      },
       audio: false
     });
+    
     video.srcObject = videoStream;
+    video.onloadedmetadata = () => {
+      video.play();
+      console.log('✓ Camera started');
+      updateStatus('📹 Camera active - analyzing...', true);
+      startAutoClassification();
+    };
+    
+    // Update button states
     document.getElementById('startBtn').disabled = true;
     document.getElementById('stopBtn').disabled = false;
-    console.log('Camera started');
-    updateStatus('Camera active', true);
-    startAutoClassification();
+    
   } catch (error) {
-    console.error('Camera error:', error);
-    updateStatus('Camera access denied', false);
-    alert('Camera access denied or unavailable: ' + error.message);
+    console.error('❌ Camera error:', error);
+    if (error.name === 'NotAllowedError') {
+      updateStatus('❌ Camera permission denied. Enable it in browser settings.', false);
+    } else if (error.name === 'NotFoundError') {
+      updateStatus('❌ No camera found on this device', false);
+    } else {
+      updateStatus(`❌ Camera error: ${error.message}`, false);
+    }
   }
 }
 
-// Stop camera stream
 function stopCamera() {
   if (videoStream) {
     videoStream.getTracks().forEach(track => track.stop());
     document.getElementById('video').srcObject = null;
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
-    console.log('Camera stopped');
+    
+    if (classificationInterval) {
+      clearInterval(classificationInterval);
+      classificationInterval = null;
+    }
+    
+    console.log('✓ Camera stopped');
     updateStatus('Ready for input', true);
   }
 }
 
-// Predict from image element
+// =====================================
+// PREDICTION & CLASSIFICATION
+// =====================================
+
+// Predict from uploaded image
 async function predictImage(imgElement) {
   try {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Draw image to canvas (224x224 for Teachable Machine)
+    ctx.drawImage(imgElement, 0, 0, 224, 224);
+    
     if (!model) {
-      // Simulate prediction if model not loaded
-      console.log('Using simulated classification');
+      console.log('ℹ️ Model not loaded, using simulated classification');
       simulateClassification();
       return;
     }
     
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(imgElement, 0, 0, 224, 224);
-    
+    // Prepare tensor
     const imageTensor = tf.browser.fromPixels(canvas)
       .resizeNearestNeighbor([224, 224])
       .toFloat()
       .div(tf.scalar(255))
-      .expandDims(0); // Add batch dimension
+      .expandDims(0);
     
+    console.log('🧠 Running inference...');
+    
+    // Get predictions
     const predictions = await model.predict(imageTensor);
     const predData = await predictions.data();
     
@@ -205,88 +242,32 @@ async function predictImage(imgElement) {
     // Cleanup
     imageTensor.dispose();
     predictions.dispose();
+    
   } catch (error) {
-    console.error('Prediction error:', error);
-    updateStatus('Error making prediction', false);
+    console.error('❌ Prediction error:', error);
+    updateStatus('❌ Prediction failed', false);
   }
 }
 
-// Simulate classification for demo (when model not loaded)
-function simulateClassification() {
-  const predictions = [
-    Math.random() * 0.3 + 0.2, // Organic
-    Math.random() * 0.2 + 0.1, // Plastic
-    Math.random() * 0.25 + 0.1, // Recyclable
-    Math.random() * 0.35 + 0.15 // Trash
-  ];
-  
-  // Normalize
-  const sum = predictions.reduce((a, b) => a + b, 0);
-  const normalized = predictions.map(p => p / sum);
-  displayResults(normalized);
-}
-
-// Display results
-function displayResults(predictions) {
-  const topIndex = predictions.indexOf(Math.max(...predictions));
-  const topClass = classes[topIndex];
-  const confidence = (predictions[topIndex] * 100).toFixed(1);
-  
-  console.log(`Prediction: ${topClass} with confidence ${confidence}%`);
-  
-  // Display classification result
-  const resultDiv = document.getElementById('result');
-  resultDiv.classList.remove('hidden');
-  resultDiv.innerHTML = `
-    <div class="result-content">
-      <h3 class="result-title">Classification Result</h3>
-      <div class="result-display">
-        <p class="result-class">${topClass}</p>
-        <p class="result-confidence">Confidence: ${confidence}%</p>
-      </div>
-    </div>
-  `;
-  
-  // Display confidence chart
-  displayChart(predictions);
-  
-  // Update status
-  updateStatus(`Classified as ${topClass}`, true);
-}
-
-// Display confidence bar chart
-function displayChart(predictions) {
-  const chartDiv = document.getElementById('confidence');
-  chartDiv.classList.remove('hidden');
-  let chartHTML = '<h3 class="chart-title">Confidence Levels</h3><div class="chart-container">';
-  
-  classes.forEach((className, index) => {
-    const percentage = (predictions[index] * 100).toFixed(1);
-    chartHTML += `
-      <div class="bar">
-        <span>${className}</span>
-        <div style="width: ${percentage}%; background: linear-gradient(90deg, var(--accent-blue), #0052a3); height: 24px; border-radius: 4px;"></div>
-      </div>
-    `;
-  });
-  
-  chartHTML += '</div>';
-  chartDiv.innerHTML = chartHTML;
-}
-
-// Auto-classify from camera
-let classificationInterval = null;
+// Auto-classify from camera feed (every 2 seconds)
 function startAutoClassification() {
   if (classificationInterval) clearInterval(classificationInterval);
   
   classificationInterval = setInterval(() => {
     const video = document.getElementById('video');
+    
     if (video.srcObject && video.readyState === video.HAVE_FUTURE_DATA) {
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
+      
       ctx.drawImage(video, 0, 0, 224, 224);
       
-      if (model) {
+      if (!model) {
+        simulateClassification();
+        return;
+      }
+      
+      try {
         const imageTensor = tf.browser.fromPixels(canvas)
           .resizeNearestNeighbor([224, 224])
           .toFloat()
@@ -301,16 +282,90 @@ function startAutoClassification() {
         }).catch(err => console.error('Inference error:', err));
         
         imageTensor.dispose();
-      } else {
-        simulateClassification();
+      } catch (error) {
+        console.error('Camera prediction error:', error);
       }
     }
-  }, 2000);
+  }, 2000); // Update every 2 seconds
 }
 
-// Initialize tab buttons
+// Simulate classification for demo mode
+function simulateClassification() {
+  const predictions = [
+    Math.random() * 0.3 + 0.1,   // Organic
+    Math.random() * 0.25 + 0.1,  // Reusable
+    Math.random() * 0.3 + 0.1,   // Plastic
+    Math.random() * 0.25 + 0.1   // Trash
+  ];
+  
+  // Normalize to sum to 1
+  const sum = predictions.reduce((a, b) => a + b, 0);
+  const normalized = predictions.map(p => p / sum);
+  
+  displayResults(normalized);
+}
+
+// =====================================
+// DISPLAY RESULTS
+// =====================================
+
+function displayResults(predictions) {
+  const topIndex = predictions.indexOf(Math.max(...predictions));
+  const topClass = classes[topIndex];
+  const confidence = (predictions[topIndex] * 100).toFixed(1);
+  
+  console.log(`🎯 Result: ${topClass} (${confidence}% confidence)`);
+  
+  // Show result card
+  const resultDiv = document.getElementById('result');
+  resultDiv.classList.remove('hidden');
+  resultDiv.innerHTML = `
+    <div class="result-content">
+      <h3 class="result-title">Classification Result</h3>
+      <div class="result-display">
+        <p class="result-class">${topClass}</p>
+        <p class="result-confidence">Confidence: ${confidence}%</p>
+      </div>
+    </div>
+  `;
+  
+  // Show confidence chart
+  displayChart(predictions);
+  
+  // Update status
+  updateStatus(`✓ Classified as ${topClass}`, true);
+}
+
+// Display confidence bar chart
+function displayChart(predictions) {
+  const chartDiv = document.getElementById('confidence');
+  chartDiv.classList.remove('hidden');
+  
+  let chartHTML = '<h3 class="chart-title">Confidence Levels</h3><div class="chart-container">';
+  
+  classes.forEach((className, index) => {
+    const percentage = (predictions[index] * 100).toFixed(1);
+    const color = ['#10b981', '#0066cc', '#f59e0b', '#ef4444'][index];
+    
+    chartHTML += `
+      <div class="bar">
+        <span>${className}</span>
+        <div style="width: ${percentage}%; background: ${color}; height: 24px; border-radius: 4px; transition: width 0.3s ease;"></div>
+      </div>
+    `;
+  });
+  
+  chartHTML += '</div>';
+  chartDiv.innerHTML = chartHTML;
+}
+
+// =====================================
+// TAB SWITCHING
+// =====================================
+
 function initializeTabButtons() {
   const tabButtons = document.querySelectorAll('.tab-button');
+  
   tabButtons.forEach((button, index) => {
     button.addEventListener('click', (e) => {
       e.preventDefault();
@@ -318,46 +373,69 @@ function initializeTabButtons() {
       switchTab(tabName);
     });
   });
-  console.log('Tab buttons initialized');
+  
+  console.log('✓ Tab buttons initialized');
 }
 
-// Tab switching function
 function switchTab(tab) {
-  console.log('Switching to tab:', tab);
+  console.log(`📑 Switching to ${tab} tab`);
   
   // Hide all tabs
-  document.getElementById('camera-tab').classList.remove('active');
-  document.getElementById('upload-tab').classList.remove('active');
+  document.getElementById('camera-tab')?.classList.remove('active');
+  document.getElementById('upload-tab')?.classList.remove('active');
   
   // Remove active from all buttons
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
   
   // Show selected tab
   if (tab === 'camera') {
-    document.getElementById('camera-tab').classList.add('active');
-    document.querySelectorAll('.tab-button')[0].classList.add('active');
-    console.log('Camera tab activated');
+    document.getElementById('camera-tab')?.classList.add('active');
+    document.querySelectorAll('.tab-button')[0]?.classList.add('active');
+    
+    // Auto-stop other operations
+    const uploadInput = document.getElementById('upload');
+    if (uploadInput) uploadInput.value = '';
+    
   } else if (tab === 'upload') {
-    document.getElementById('upload-tab').classList.add('active');
-    document.querySelectorAll('.tab-button')[1].classList.add('active');
-    console.log('Upload tab activated');
+    document.getElementById('upload-tab')?.classList.add('active');
+    document.querySelectorAll('.tab-button')[1]?.classList.add('active');
+    
+    // Stop camera if running
+    stopCamera();
   }
 }
 
-// Update status function
+// =====================================
+// UTILITIES
+// =====================================
+
 function updateStatus(message, isSuccess = true) {
   const statusText = document.getElementById('status-text');
   const statusDot = document.querySelector('.status-dot');
+  
   if (statusText) {
     statusText.textContent = message;
   }
+  
   if (statusDot) {
     statusDot.style.background = isSuccess ? '#10b981' : '#f59e0b';
   }
-  console.log('Status updated:', message, isSuccess ? '✓' : '✗');
+  
+  console.log(`[${isSuccess ? '✓' : '⚠'}] ${message}`);
 }
 
-console.log('Script loaded successfully!');
-console.log('Classes:', classes);
-console.log('Model URL:', MODEL_URL);
-console.log('File upload with drag-and-drop enabled');
+// =====================================
+// STARTUP LOG
+// =====================================
+
+console.log(`
+╔════════════════════════════════════╗
+║   WASTECLASSIFY - INTEGRATED v1.0  ║
+╚════════════════════════════════════╝
+📊 Classes: ${classes.join(', ')}
+📂 Model URL: ${MODEL_URL}
+🧠 TensorFlow.js: ${tf?.version?.tfjs || 'Not loaded'}
+🎯 Ready to classify waste!
+`);
