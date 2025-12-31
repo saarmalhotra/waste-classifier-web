@@ -13,61 +13,63 @@
     <div class="container">
       <div class="logo">
         <h1>🗑️ WasteClassify</h1>
-        <p>AI-Powered Waste Classification</p>
+        <p>AI-Powered Waste Classification System</p>
       </div>
     </div>
   </nav>
 
-  <!-- MAIN -->
+  <!-- MAIN CONTENT -->
   <main class="container">
     <div class="card">
       <!-- TABS -->
       <div class="tabs">
-        <button class="tab-btn active">📹 Camera</button>
-        <button class="tab-btn">📤 Upload</button>
+        <button class="tab-btn active" data-tab="camera">📹 Camera</button>
+        <button class="tab-btn" data-tab="upload">📤 Upload Image</button>
       </div>
 
       <!-- CAMERA TAB -->
-      <div id="cameraTab" class="tab-content">
+      <div id="camera" class="tab-content active">
         <div class="video-wrapper">
           <video id="video" class="video-stream" autoplay muted playsinline></video>
           <div class="video-overlay">Position waste in frame</div>
         </div>
         <div class="button-group">
-          <button id="startBtn" class="btn btn-primary">Start Camera</button>
-          <button id="stopBtn" class="btn btn-secondary" disabled>Stop Camera</button>
+          <button id="startBtn" class="btn btn-primary">📹 Start Camera</button>
+          <button id="stopBtn" class="btn btn-secondary" disabled>⏹️ Stop Camera</button>
         </div>
       </div>
 
       <!-- UPLOAD TAB -->
-      <div id="uploadTab" class="tab-content hidden">
+      <div id="upload" class="tab-content">
         <div id="uploadBox" class="upload-box">
           <div class="upload-icon">📁</div>
-          <p>Drop image here or click to upload</p>
-          <small>JPG, PNG (Max 5MB)</small>
+          <h3>Drop Image Here</h3>
+          <p>or click to browse</p>
+          <small>Supported: JPG, PNG (Max 5MB)</small>
         </div>
         <input type="file" id="fileInput" accept="image/*" style="display:none;">
       </div>
 
-      <!-- CANVAS (HIDDEN) -->
+      <!-- HIDDEN CANVAS -->
       anvas id="canvas" width="224" height="224" style="display:none;"></canvas>
 
-      <!-- STATUS -->
+      <!-- STATUS BAR -->
       <div class="status-bar">
         <span class="status-dot"></span>
         <span id="status">Ready for input</span>
       </div>
     </div>
 
-    <!-- RESULTS -->
-    <div id="result" class="result-card hidden">
+    <!-- RESULTS SECTION -->
+    <div id="resultCard" class="result-card hidden">
       <h2>Classification Result</h2>
+      <div id="result" class="result-display"></div>
     </div>
 
-    <!-- CHART -->
-    <div id="chart" class="chart-card hidden">
+    <!-- CHART SECTION -->
+    <div id="chartCard" class="chart-card hidden">
       <h3>Confidence Levels</h3>
-      <div id="chartContainer"></div>
+      <div id="chart" class="chart-container"></div>
     </div>
   </main>
 
