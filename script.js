@@ -195,6 +195,38 @@ function startAutoClassification() {
     }, 2000);
 }
 
+
+// Tab switching function
+function switchTab(tab) {
+    // Hide all tabs
+    document.getElementById('camera-tab').classList.remove('active');
+    document.getElementById('upload-tab').classList.remove('active');
+    
+    // Remove active from all buttons
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    
+    // Show selected tab
+    if (tab === 'camera') {
+        document.getElementById('camera-tab').classList.add('active');
+        document.querySelectorAll('.tab-button')[0].classList.add('active');
+    } else if (tab === 'upload') {
+        document.getElementById('upload-tab').classList.add('active');
+        document.querySelectorAll('.tab-button')[1].classList.add('active');
+    }
+}
+
+// Update status function
+function updateStatus(message, isSuccess = true) {
+    const statusText = document.getElementById('status-text');
+    const statusDot = document.querySelector('.status-dot');
+    if (statusText) {
+        statusText.textContent = message;
+    }
+    if (statusDot) {
+        statusDot.style.background = isSuccess ? '#10b981' : '#f59e0b';
+    }
+}
+
 console.log('Script loaded successfully!');
 console.log('Classes:', classes);
 console.log('Model URL:', MODEL_URL);
