@@ -1,0 +1,13 @@
+# Add your Teachable Machine model files here
+# Files needed:
+# - model.json
+# - group1-shard1of.bin (or similar shard files)
+
+# Instructions:
+# 1. Train model on https://teachablemachine.withgoogle.com
+# 2. Export as TensorFlow.js
+# 3. Download the files
+# 4. Place them in this folder
+# 5. Commit to GitHub
+
+# The app will automatically load model.json from this folder
